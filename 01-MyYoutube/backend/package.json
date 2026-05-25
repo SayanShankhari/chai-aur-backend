@@ -7,12 +7,17 @@
 	"type": "module",
 	"main": "server.js",
 	"scripts": {
-		"start": "node server.js"
-		, "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
-		, "test": "echo \"Error: no test specified\" && exit 1"
+		"start": "node server.js",
+		"dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
 	},
-	"keywords": ["chai", "backend"],
+	"keywords": [
+		"chai",
+		"backend"
+	],
 	"dependencies": {
+		"cookie-parser": "^1.4.7",
+		"cors": "^2.8.6",
 		"dotenv": "^17.4.2",
 		"express": "^5.2.1",
 		"mongoose": "^9.6.2"
