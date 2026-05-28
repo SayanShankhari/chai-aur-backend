@@ -1,29 +1,26 @@
 // import all env variables from .env file, and add them to process.env object, so that we can access them using process.env.VARIABLE_NAME
 // require ('dotenv').config ({ path: "../.env" });	// approach-1: using require, commonjs module system
 import dotenv from "dotenv";
+import app from "./app.js"; // using actual file name is mandatory for module js
 import connectDB from "./database/index.js"; // using actual file name is mandatory for module js
 
-import express from "express";
-import cors from "cors";
-
-dotenv.config ({ path: "../.env" });
+dotenv.config ( { path: "../.env" } );	// first thing to load env variables
 
 const port = process.env.PORT || 3000;
-const app = express ();
 
 connectDB ()
-.then (() => {
-	app.listen (port, () => {
-		console.log (`Server is running on port ${port}`);
-	});
+	.then (() => {
+		app.listen (port, () => {
+			console.log (`Server is running on port ${port}`);
+		});
 
-	app.on ("error", (error) => {
-		throw error;
+		app.on ("error", (error) => {
+			throw error;
+		});
+	})
+	.catch ((error) => {
+		console.error ("Error: ", error);
 	});
-})
-.catch ((error) => {
-	console.error ("Error: ", error);
-});
 
 /*
 // approach-1:

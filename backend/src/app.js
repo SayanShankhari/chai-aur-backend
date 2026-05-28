@@ -1,0 +1,55 @@
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import { FILE_SIZE_LIMIT } from "./constants.mjs";
+
+const app = express ();
+
+app.use (express.json (
+	{
+		limit: FILE_SIZE_LIMIT
+	}
+));
+app.use (express.urlencoded (
+	{
+		extended: true	// nested objects and arrays can be encoded into the URL-encoded format, allowing for rich data structures to be sent in the request body
+		, limit: FILE_SIZE_LIMIT
+	}
+));
+app.use (express.static ("public"));	// to serve static files from public folder, like images, css, js files etc
+app.use (cors (
+	{
+		origin: process.env.CORS_ORIGIN.split (",")
+		, credentials: true
+	}
+));
+app.use (cookieParser ());
+
+
+// routes import
+import { testRouter } from "./routes/test.route.js";
+import { usersRouter } from "./routes/users.route.js";
+import { userRouter } from "./routes/user.route.js";
+
+app.get ("/", (_request, response) => {
+	response.send ("hello!");
+});
+app.get ("/test", (_request, response) => {
+	response.json (
+		{
+			status: 200
+			, message: "chai-aur-backend!"
+		}
+	);
+});
+// routes declaration
+// app.use ("/user", userRouter);
+app.use ("/api/test", testRouter);
+app.use ("/api/v1/users", usersRouter);
+app.use ("/api/v1/user", userRouter);
+// to avoid conflict with frontend routes, we can prefix all backend routes with /api/v1 or something like that
+// control flow: ROUTER -> CONTROLLER -> SERVICE -> MODEL -> DATABASE => SERVICE => CONTROLLER => ROUTER => RESPONSE
+// localhost:5000/api/v1/users/[register/login/getAll/getById/update/delete]
+// localhost:5000/api/v1/user/[profile/update/logout]
+
+export default app;

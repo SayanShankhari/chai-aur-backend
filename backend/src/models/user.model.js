@@ -1,9 +1,13 @@
 import { Schema, model } from 'mongoose';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema({
-	username: {
+	fullName: {
+		type: String
+		, required: [true, "Full Name is required"]
+	}
+	, username: {
 		type: String
 		, required: [true, "Username is required"]
 		, unique: true
@@ -25,7 +29,7 @@ const userSchema = new Schema({
 		type: String
 		, default: null
 	}
-	, coverImage: {
+	, banner: {
 		type: String
 		, default: null
 	}
@@ -41,19 +45,22 @@ const userSchema = new Schema({
 }, { timestamps: true });
 
 // add pre-save middleware hook
-// do not use arrow function here since we need access object context via 'this' which refers to the user document being saved
-userSchema.pre ("save", async function (next) {
+// do not use arrow function here since arrow function lacks 'this' object context
+// if it was a synchronous function only one data parameter is required
+// it is an asynchronous function, hence two parameters are required
+userSchema.pre ("save", async function () {
 	if (!this.isModified ("password")) {	// to avoid re-hashing the password if it hasn't been changed
-		return next ();
+		return next ();	// returns control back
 	}
 	try {
 		// const salt = await bcrypt.genSalt (10);
 		// this.password = await bcrypt.hash (this.password, salt);
 		const rounds = 10;
 		this.password = await bcrypt.hash (this.password, rounds);
-		next ();
-	} catch (err) {
-		next (err);
+		//next ();	// move control forward in the chain
+	} catch (error) {
+		throw error;
+		// next (error);	// propagate the error forward in the chain
 	}
 });
 

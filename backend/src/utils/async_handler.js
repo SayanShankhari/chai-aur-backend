@@ -5,10 +5,10 @@
 // }
 
 const async_handler = (handler) => {
-	(request, response, next) => {
+	return ((request, response, next) => {
 		Promise.resolve (handler (request, response, next))
 		.catch ((err) => next (err));
-	}
+	});
 }
 
 
