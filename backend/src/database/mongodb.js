@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { DB_NAME } from "../constants.mjs";
 
+
 const connectDB = async () => {
 	try {
 		const response = await mongoose.connect (`${process.env.MONGODB_URI}/${DB_NAME}`);
@@ -11,5 +12,6 @@ const connectDB = async () => {
 		process.exit (1);
 	}
 }
+
 
 export default connectDB;

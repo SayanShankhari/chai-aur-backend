@@ -4,6 +4,13 @@
 // 	};
 // }
 
+
+/**
+ * a higher order function to handle asynchronous request
+ * 
+ * @param {Function} handler - async function as input
+ * @returns {void}
+ */
 const async_handler = (handler) => {
 	return ((request, response, next) => {
 		Promise.resolve (handler (request, response, next))
@@ -26,5 +33,6 @@ const async_handler = (handler) => {
 // 		);
 // 	}
 // };
+
 
 export { async_handler };

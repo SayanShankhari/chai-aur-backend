@@ -2,7 +2,8 @@
 // require ('dotenv').config ({ path: "../.env" });	// approach-1: using require, commonjs module system
 import dotenv from "dotenv";
 import app from "./app.js"; // using actual file name is mandatory for module js
-import connectDB from "./database/index.js"; // using actual file name is mandatory for module js
+import connectDB from "./database/mongodb.js"; // using actual file name is mandatory for module js
+
 
 dotenv.config ( { path: "../.env" } );	// first thing to load env variables
 

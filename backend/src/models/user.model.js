@@ -2,6 +2,7 @@ import { Schema, model } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import bcrypt from "bcrypt";
 
+
 const userSchema = new Schema({
 	fullName: {
 		type: String
@@ -64,13 +65,14 @@ userSchema.pre ("save", async function () {
 	}
 });
 
-// add custom instance methods to the user schema
+// bind custom instance methods to the user schema
 userSchema.methods.isCorrectPassword = async function (given_password) {
 	return await bcrypt.compare (given_password, this.password);
 }
 userSchema.methods.generateAccessToken = async function () {	// can omit async since jwt.sign is synchronous, but keeping it async for consistency and future-proofing
 	const payload = {
 		id: this._id
+		// optionally included:
 		, username: this.username
 		, email: this.email
 		, fullname: this.fullname
@@ -78,8 +80,10 @@ userSchema.methods.generateAccessToken = async function () {	// can omit async s
 
 	return jwt.sign (
 		payload
-		, process.env.ACCESS_TOKEN_SECRET
-		, { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "15m" }
+		// secretOrPrivateKey
+		, process.env.JWT_ACCESS_SECRET
+		// options
+		, { expiresIn: process.env.JWT_ACCESS_EXPIRY || "15m" }
 	);
 }
 userSchema.methods.generateRefreshToken = function () {
@@ -87,10 +91,11 @@ userSchema.methods.generateRefreshToken = function () {
 		// payload
 		{ id: this._id }
 		// secretOrPrivateKey
-		, process.env.REFRESH_TOKEN_SECRET
+		, process.env.JWT_REFRESH_SECRET
 		// options
-		, { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d" }
+		, { expiresIn: process.env.JWT_REFRESH_EXPIRY || "7d" }
 	);
 }
+
 
 export const User = model ("User", userSchema);

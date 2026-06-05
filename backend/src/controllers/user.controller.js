@@ -1,8 +1,9 @@
 import { async_handler } from "../utils/async_handler.js";
 import { User } from "../models/user.model.js";
-import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiFailure } from "../utils/ApiFailure.js";
+import { ApiSuccess } from "../utils/ApiSuccess.js";
 import { cloudinaryService } from "../services/cloudinary.service.js";
+
 
 const registerUser = async_handler (async (request, response) => {
 	// get user details from frontend
@@ -15,18 +16,18 @@ const registerUser = async_handler (async (request, response) => {
 			field === undefined || field.trim () === ""
 		))
 	) {
-		throw new ApiError (400, "All fields are required and cannot be empty!");
+		throw new ApiFailure (400, "All fields are required and cannot be empty!");
 	}
 	// validation - proper email format
 	if (!email.includes ("@")) {
-		throw new ApiError (400, "Please provide a valid email address!");
+		throw new ApiFailure (400, "Please provide a valid email address!");
 	}
 
 	// check if user already exists - username, email
 	const existing_user = await User.findOne ( { $or: [{ username }, { email }] } );
 
 	if (existing_user) {
-		throw new ApiError (409, "User with this email or username already exists!");
+		throw new ApiFailure (409, "User with this email or username already exists!");
 	}
 
 	// get the local paths for avatar and cover image
@@ -36,10 +37,10 @@ const registerUser = async_handler (async (request, response) => {
 
 	// check for images and avatar
 	if (!avatar_local_path) {
-		throw new ApiError (400, "Avatar image is required!");
+		throw new ApiFailure (400, "Avatar image is required!");
 	}
 	if (!banner_local_path) {
-		throw new ApiError (400, "Cover image is required!");
+		throw new ApiFailure (400, "Cover image is required!");
 	}
 
 	// upload to cloudinary
@@ -50,10 +51,10 @@ const registerUser = async_handler (async (request, response) => {
 
 	// TODO: check if avatar is uploaded successfully via multer
 	if (!avatar_URL) {
-		throw new ApiError (400, "Avatar upload failed!");
+		throw new ApiFailure (400, "Avatar upload failed!");
 	}
 	if (!banner_URL) {
-		await new ApiError (400, "Banner upload error!");
+		await new ApiFailure (400, "Banner upload error!");
 	}
 
 	// get the URL from response and save to database
@@ -70,7 +71,7 @@ const registerUser = async_handler (async (request, response) => {
 	);
 
 	// if (!user) {
-	// 	throw new ApiError (500, "Something went wrong registering the user!");
+	// 	throw new ApiFailure (500, "Something went wrong registering the user!");
 	// }
 
 	// check for user creation response
@@ -109,6 +110,120 @@ const registerUser = async_handler (async (request, response) => {
 	// 		}
 	// 	);
 	// }
+});
+
+const generateAccessAndRefreshTokens = async (user_id) => {
+	try {
+		// find user with id
+		const user = await User.findById (user_id);
+
+		// generate tokens
+		const access_token = user.generateAccessToken();
+		const refresh_token = user.generateRefreshToken();
+
+		// add to database
+		user.accessToken = access_token;
+		user.refreshToken = refresh_token;
+
+		// save to database
+		await user.save ( { validateBeforeSave: false } );
+
+		return {
+			accessToken: access_token
+			, refreshToken: refresh_token
+		};
+	} catch (error) {
+		throw new ApiFailure (500, "Something went wrong while generating access/refresh token!");
+	}
+}
+
+const loginUser = async_handler (async (request, response) => {
+	// check and sanitize input
+	const { username, email, password } = request.body;
+
+	// based on username or email
+	// if (!(username || email)) {
+	if (!username && !email) {
+		throw new ApiFailure (400, "Username or Email is required!");
+	}
+
+	// find the user id
+	const user = await User.findOne (
+		{
+			$or: [ {username}, {email} ]
+		}
+	);
+
+	if (!user) {
+		throw new ApiFailure (404, "User not found!");
+	}
+
+	// match password
+	const match_status = await user.isCorrectPassword (password);
+
+	if (!match_status) {
+		throw new ApiFailure (401, "Invalid user credentials!");
+	}
+
+	// check access and refresh token
+	const { accessToken, refreshToken } = await generateAccessAndRefreshTokens (user._id);
+
+	// TODO: refine the multiple fetch
+	const logged_in_user = await User.findById (user._id)
+		.select ("-password -refreshToken");
+
+	// send cookie (secure)
+	const cookie_options = {
+		httpOnly: true
+		, secure: true
+	};	// modifiable only inside server
+
+	return response
+		.status (200)
+		.cookie ("accessToken", accessToken, cookie_options)
+		.cookie ("refreshToken", refreshToken, cookie_options)
+		.json (
+			new ApiSuccess (
+				200
+				, {
+					user: logged_in_user
+					, accessToken
+					, refreshToken
+				}
+				, "User logged in successfully!"
+			)
+		);
+
+});
+
+const logoutUser = async_handler (async (request, response) => {
+	await User.findByIdAndUpdate (
+		request.user._id	// user property is glued to request via auth middleware
+		, {
+			$set: {
+				refreshToken: undefined
+			}
+		}, {
+			new: true	// response is newly updated
+		}
+	);
+
+	const cookie_options = {
+		httpOnly: true
+		, secure: true
+	}
+
+	return response
+		.status (200)
+		.clearCookie (accessToken, cookie_options)
+		.clearCookie (refreshToken, cookie_options)
+		.json (
+			new ApiResponse (
+				200
+				, {}	// empty object
+				, "User logged out successfully!"
+			)
+		);
 });
 
 const getAllUsers = async_handler (async (_request, response) => {
@@ -271,4 +386,6 @@ export const userController = {
 	, updateUser
 	, deleteUser
 	, getMyProfile
+	, loginUser
+	, logoutUser
 };

@@ -1,6 +1,6 @@
 export const DB_NAME = "MyYoutube";
 export const FILE_SIZE_LIMIT = "16kb";
 
-export const HTTP_Response_Codes = {
+export const HTTP_Status_Codes = {
 	
 }
