@@ -28,7 +28,7 @@ connectDB ()
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants.mjs";
 
-// async iffe (immediately invoked function expression), self invoking self executing function
+// async IIFE (immediately invoked function expression), self invoking self executing function
 // puts semicolon at the beginning to prevent issues with concatenation of scripts, if the previous script doesn't end with a semicolon, it will cause an error
 ;(async () => {
 	try {

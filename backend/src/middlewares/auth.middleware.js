@@ -18,23 +18,23 @@ const verifyToken = async_handler (async (request, _response, next) => {
 	// request.header ("Authorization") -> handled access, case insensitive, alias safe
 
 	try {
-		const token =
-			request.cookies?.accessToken ||
-			request.header ("Authorization")?.replace ("Bearer", "").trim();
+		const token = request.cookies?.refreshToken
+			|| request.header ("Authorization")?.replace ("Bearer", "").trim();
+		// console.log ("token: ", token);
 
 		if (!token) {
 			throw new ApiFailure (401, "Unauthorized request!");
 		}
 
-		const decoded_data = jwt.verify (token, process.env.JWT_ACCESS_SECRET);
+		// Throws an exception if invalid, expired, or tampered with
+		const decoded_token_data = jwt.verify (token, process.env.JWT_REFRESH_SECRET);
+		// console.log ("decoded token data: ", decoded_token_data);
 
-		const user = await User.findById (decoded_data?._id).select(
-			"-password -accessToken"
-		);
-
+		const user = await User.findById (decoded_token_data?.id).select ("-password -refreshToken");
+		// console.log ("found user: ", user);
 		if (!user) {
 			// TODO: frontend
-			throw new ApiFailure (401, "Invalid access token!");
+			throw new ApiFailure (401, "(Middleware): Invalid access token!");
 		}
 
 		// verified
@@ -42,7 +42,7 @@ const verifyToken = async_handler (async (request, _response, next) => {
 
 		next(); // mark as complete and transfer control
 	} catch (error) {
-		throw new ApiFailure (401, error?.message || "Something went wrong verifying access token!");
+		throw new ApiFailure (401, `(Middleware): ${error?.message}` || "(Middleware): Something went wrong verifying access token!");
 	}
 });
 

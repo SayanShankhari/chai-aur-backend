@@ -56,7 +56,7 @@ app.use ("/api/v1/user", userRouter);
 // localhost:5000/api/v1/users/[register/login/getAll/getById/update/delete]
 // localhost:5000/api/v1/user/[profile/update/logout]
 
-// 3. register Error Handler at the absolute bottom
+// 3. MUST BE LAST: register the global Error Handler at the absolute bottom
 app.use (responseMiddleware.failureMiddleware);
 
 

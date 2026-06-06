@@ -13,14 +13,13 @@ usersRouter.post ("/register", multerMiddleware.uploadFilesFrom.fields (
 		, { name: "banner", maxCount: 1 }
 	]
 ), userController.registerUser);
-usersRouter.route ("/list") .get (authMiddleware.verifyToken, userController.getAllUsers);
-usersRouter.route ("/get:id") .get (authMiddleware.verifyToken, userController.getUserById);
-usersRouter.route ("/update:id") .put (authMiddleware.verifyToken, userController.updateUser);
-usersRouter.route ("/delete:id") .delete (authMiddleware.verifyToken, userController.deleteUser);
+usersRouter.route ("/list") .get (userController.getAllUsers);
+usersRouter.route ("/get:id") .get (userController.getUserById);
+usersRouter.route ("/update:id") .put (userController.updateUser);
+usersRouter.route ("/delete:id") .delete (userController.deleteUser);
 // without using route chaining
-usersRouter.post ("/login", authMiddleware.verifyToken, userController.loginUser);
-
 // secured routes:
+usersRouter.post ("/login", authMiddleware.verifyToken, userController.loginUser);
 usersRouter.post ("/logout", authMiddleware.verifyToken, userController.logoutUser);
 
 

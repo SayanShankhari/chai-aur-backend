@@ -113,27 +113,47 @@ const registerUser = async_handler (async (request, response) => {
 });
 
 const generateAccessAndRefreshTokens = async (user_id) => {
+	// async_handler is not required; as we are not handling web api request
+	// DO NOT call from outside unless checked
+	// console.log ("user_id: ", user_id);
+
 	try {
-		// find user with id
+		// 1. find user with id
 		const user = await User.findById (user_id);
+		// console.log ("user: ", user);
+		// no need to check user's existence as the flow already checked it
 
-		// generate tokens
-		const access_token = user.generateAccessToken();
-		const refresh_token = user.generateRefreshToken();
+		// 2. generate tokens
+		const access_token = await user.generateAccessToken();
+		// console.log ("accessToken: ", access_token);
+		const refresh_token = await user.generateRefreshToken();
+		// console.log ("refreshToken: ", refresh_token);
 
-		// add to database
-		user.accessToken = access_token;
+		// 3. add to database
+		// no need to save access token to database
+		// user.accessToken = access_token;
 		user.refreshToken = refresh_token;
+		// console.log ("Final User with refreshToken:", user);
 
-		// save to database
+		// "save" to database (mongodb pre hook utility, defined inside user model)
+		// IN"validateBeforeSave" to avoid password mandate
+		// no need to access return value
 		await user.save ( { validateBeforeSave: false } );
 
-		return {
-			accessToken: access_token
-			, refreshToken: refresh_token
-		};
+		return (
+			{
+				accessToken: access_token
+				, refreshToken: refresh_token
+			}
+		);
 	} catch (error) {
-		throw new ApiFailure (500, "Something went wrong while generating access/refresh token!");
+		throw new ApiFailure (
+			500
+			, "Something went wrong while generating access/refresh token!"
+			, [error]
+			, (process.env.NODE_ENV === "dev") ? error.stack : undefined
+			, null
+		);
 	}
 }
 
@@ -147,7 +167,7 @@ const loginUser = async_handler (async (request, response) => {
 		throw new ApiFailure (400, "Username or Email is required!");
 	}
 
-	// find the user id
+	// find the user id [aggregation pipeline]
 	const user = await User.findOne (
 		{
 			$or: [ {username}, {email} ]
@@ -169,36 +189,34 @@ const loginUser = async_handler (async (request, response) => {
 	const { accessToken, refreshToken } = await generateAccessAndRefreshTokens (user._id);
 
 	// TODO: refine the multiple fetch
-	const logged_in_user = await User.findById (user._id)
-		.select ("-password -refreshToken");
+	const logged_in_user = await User.findById (user._id).select ("-password -refreshToken");
 
 	// send cookie (secure)
 	const cookie_options = {
 		httpOnly: true
 		, secure: true
-	};	// modifiable only inside server
+	};	// "httpOnly" & "secure" to modify only inside backend (server)
 
 	return response
 		.status (200)
-		.cookie ("accessToken", accessToken, cookie_options)
+		.cookie ("accessToken", accessToken, cookie_options) // (key, value, options)
 		.cookie ("refreshToken", refreshToken, cookie_options)
 		.json (
 			new ApiSuccess (
 				200
+				, "User logged in successfully!"
 				, {
 					user: logged_in_user
 					, accessToken
 					, refreshToken
 				}
-				, "User logged in successfully!"
 			)
 		);
-
 });
 
 const logoutUser = async_handler (async (request, response) => {
 	await User.findByIdAndUpdate (
-		request.user._id	// user property is glued to request via auth middleware
+		request.user._id	// "user" model property is glued to request via auth middleware
 		, {
 			$set: {
 				refreshToken: undefined
@@ -215,15 +233,22 @@ const logoutUser = async_handler (async (request, response) => {
 
 	return response
 		.status (200)
-		.clearCookie (accessToken, cookie_options)
-		.clearCookie (refreshToken, cookie_options)
+		.clearCookie ("accessToken", cookie_options)
+		.clearCookie ("refreshToken", cookie_options)
 		.json (
-			new ApiResponse (
+			new ApiSuccess (
 				200
-				, {}	// empty object
 				, "User logged out successfully!"
+				, {}	// empty payload object
 			)
 		);
+
+	// 204 means success without any response content
+	// return response
+	// 	.status (204)
+	// 	.clearCookie ("accessToken", cookie_options)
+	// 	.clearCookie ("refreshToken", cookie_options)
+	// 	);
 });
 
 const getAllUsers = async_handler (async (_request, response) => {

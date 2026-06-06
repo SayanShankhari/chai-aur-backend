@@ -36,14 +36,15 @@ class ApiFailure extends Error {
 
 	// @Override
 	toJSON() {
+		// stringify the keys to match globally accepted JSON format
 		return {
-			success: false
-			, statusCode: this.status_code
-			, errorMessage: this.error_message
-			, errorList: this.error_list
-			, payloadData: this.payload_data
+			"success": false
+			, "statusCode": this.status_code
+			, "errorMessage": this.error_message
+			, "errorList": this.error_list
+			, "payloadData": this.payload_data
 			// send error stack only in development environment
-			, errorStack: process.env.NODE_ENV === "dev" ? this.stack : undefined
+			, "errorStack": process.env.NODE_ENV === "dev" ? this.stack : undefined
 		}
 	}
 }

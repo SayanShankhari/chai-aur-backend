@@ -50,18 +50,42 @@ const userSchema = new Schema({
 // if it was a synchronous function only one data parameter is required
 // it is an asynchronous function, hence two parameters are required
 userSchema.pre ("save", async function () {
-	if (!this.isModified ("password")) {	// to avoid re-hashing the password if it hasn't been changed
-		return next ();	// returns control back
+	// if (this.isModified ("password")) {
+	// 	try {
+	// 		// const salt = await bcrypt.genSalt (10);
+	// 		// this.password = await bcrypt.hash (this.password, salt);
+	// 		const rounds = 10;
+	// 		this.password = await bcrypt.hash (this.password, rounds);
+	// 		next();	// move control forward in the chain
+	// 	} catch (error) {
+	// 		// throw error;
+	// 		next (error);	// propagate the error forward in the chain
+	// 	}
+	// } else if (this.isModified ("refreshToken")) {
+	// 	// this.refreshToken = 
+	// } else {
+	// 	// to avoid re-hashing the password/refreshToken if it hasn't been changed
+	// 	return next();	// returns control back
+	// }
+
+	if (
+		!this.isModified ("password")
+		&& !this.isModified ("refreshToken")
+	) {
+		// to avoid re-hashing the password/refreshToken if it hasn't been changed
+		return next();	// returns control back
 	}
-	try {
-		// const salt = await bcrypt.genSalt (10);
-		// this.password = await bcrypt.hash (this.password, salt);
-		const rounds = 10;
-		this.password = await bcrypt.hash (this.password, rounds);
-		//next ();	// move control forward in the chain
-	} catch (error) {
-		throw error;
-		// next (error);	// propagate the error forward in the chain
+	if (this.isModified ("password")) {
+		try {
+			// const salt = await bcrypt.genSalt (10);
+			// this.password = await bcrypt.hash (this.password, salt);
+			const rounds = 10;
+			this.password = await bcrypt.hash (this.password, rounds);
+			next();	// move control forward in the chain
+		} catch (error) {
+			// throw error;
+			next (error);	// propagate the error forward in the chain
+		}
 	}
 });
 

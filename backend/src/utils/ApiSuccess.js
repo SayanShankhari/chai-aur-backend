@@ -19,10 +19,10 @@ class ApiSuccess {
 	 */
 	toJSON() {
 		return {
-			success: this.success
-			, statusCode: this.status_code
-			, successMessage: this.success_message
-			, payloadData: this.payload_data
+			"success": this.success
+			, "statusCode": this.status_code
+			, "successMessage": this.success_message
+			, "payloadData": this.payload_data
 		};
     }
 }
