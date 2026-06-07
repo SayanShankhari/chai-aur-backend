@@ -18,7 +18,7 @@ const async_handler = (handler) => {
 	});
 }
 
-
+// alternative traditional way:
 // const async_handler = (handler) => async (error, request, response, next) => {
 // 	try {
 // 		await handler (error, request, response, next);

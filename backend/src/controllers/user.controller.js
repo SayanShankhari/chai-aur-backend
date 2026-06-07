@@ -371,39 +371,6 @@ const deleteUser = async_handler (async (request, response) => {
 	}
 });
 
-const getMyProfile = async_handler (async (request, response) => {
-	try {
-		// request.user.id comes directly from the verified JWT token payload
-		const user = await User.findById (request.user.id).select('-password'); // Exclude password from response
-
-		if (!user) {
-			return response.status(404).json (
-				{
-					success: false
-					, message: "User not found!"
-					, data: null
-				}
-			);
-		}
-
-		response.status(200).json (
-			{
-				success: true
-				, message: "Profile found successfully!"
-				, data: user
-			}
-		);
-	} catch (error) {
-		response.status(500).json (
-			{
-				success: false
-				, message: error.message
-				, data: null
-			}
-		);
-	}
-});
-
 const refreshAccessToken = async_handler (async (request, response) => {
 	const incoming_refresh_token = request.cookies.refreshToken || request.body.refreshToken;
 
@@ -457,6 +424,159 @@ const refreshAccessToken = async_handler (async (request, response) => {
 	}
 });
 
+const updatePassword = async_handler (async (request, response) => {
+	const { oldPassword, newPassword } = request.body;
+
+	if (!oldPassword || !newPassword) {
+		throw new ApiFailure (404, "Password not provided!");
+	}
+
+	const user = await User.findById (request.user?._id);
+
+	if (!user) {
+		throw new ApiFailure (400, "User info not found!");
+	}
+
+	const password_matched = await user.isCorrectPassword (oldPassword);
+
+	if (!password_matched) {
+		throw new ApiFailure (400, "Invalid old password!");
+	}
+
+	user.password = newPassword;
+	await user.save ( { validateBeforeSave: false } );	// call pre hook
+
+	return response
+		.status (200)
+		.json (
+			new ApiSuccess (
+				200
+				, "Password changed successfully!"
+				, {}
+			)
+		);
+});
+
+const getUser = async_handler (async (request, response) => {
+	try {
+		// request.user.id comes directly from the verified JWT token payload
+		const user = await User.findById (request.user?._id).select ("-password"); // Exclude password from response
+
+		if (!user) {
+			throw new ApiFailure (400, "User not found! Please log in!");
+		}
+
+		return response
+		.status (200)
+		.json (
+			new ApiSuccess (
+				200
+				, "Profile found successfully!"
+				, user
+			)
+		);
+	} catch (error) {
+		throw new ApiFailure (500, error?.message || "User not found!", [], error?.stack, null);
+	}
+});
+
+const updateAccountDetails = async_handler (async (request, response) => {
+	const { fullName, email } = request.body;
+
+	if (!fullName || !email) {
+		throw new ApiFailure (400, "All fields are required!");
+	}
+
+	const user = User.findByIdAndUpdate (
+		request.user?._id
+		, {
+			$set: {
+				fullName, email
+			}
+		}, {
+			new: true
+		}
+	).select ("-password");
+
+	return response
+		.status (200)
+		.json (
+			new ApiSuccess (
+				200
+				, "Account details updated successfully!"
+				, user
+			)
+		);
+});
+
+const updateUserAvatar = async_handler (async (request, response) => {
+	const avatar_local_path = request.file?.path;
+
+	if (!avatar_local_path) {
+		throw new ApiFailure (400, "Avatar file is missing!");
+	}
+
+	const avatar = await cloudinaryService.uploadOnCloudinary (avatar_local_path);
+
+	if (!avatar.url) {
+		throw new ApiFailure (400, "Error uploading avatar to cloudinary!");
+	}
+
+	await User.findByIdAndUpdate (
+		request.user?._id
+		, {
+			$set: {
+				avatar: avatar.url
+			}
+		}
+		, { new: true }
+	).select ("-password");
+
+	return response
+		.status (200)
+		.json (
+			new ApiSuccess (
+				200
+				, "Avatar updated successfully!"
+				, avatar.url
+			)
+		);
+});
+
+const updateUserBanner = async_handler (async (request, response) => {
+	const banner_local_path = request.file?.path;
+
+	if (!banner_local_path) {
+		throw new ApiFailure (400, "Banner file is missing!");
+	}
+
+	const banner = await cloudinaryService.uploadOnCloudinary (banner_local_path);
+
+	if (!banner.url) {
+		throw new ApiFailure (400, "Error uploading avatar to cloudinary!");
+	}
+
+	await User.findByIdAndUpdate (
+		request.user?._id
+		, {
+			$set: {
+				banner: banner.url
+			}
+		}
+		, { new: true }
+	).select ("-password");
+
+	return response
+		.status (200)
+		.json (
+			new ApiSuccess (
+				200
+				, "Banner updated successfully!"
+				, banner.url
+			)
+		);
+});
+
 
 export const userController = {
 	registerUser
@@ -464,8 +584,12 @@ export const userController = {
 	, getUserById
 	, updateUser
 	, deleteUser
-	, getMyProfile
+	, getUser
 	, loginUser
 	, logoutUser
 	, refreshAccessToken
+	, updatePassword
+	, updateAccountDetails
+	, updateUserAvatar
+	, updateUserBanner
 };
