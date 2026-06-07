@@ -21,6 +21,7 @@ usersRouter.route ("/delete:id") .delete (userController.deleteUser);
 // secured routes:
 usersRouter.post ("/login", authMiddleware.verifyToken, userController.loginUser);
 usersRouter.post ("/logout", authMiddleware.verifyToken, userController.logoutUser);
-
+// again using route chaining
+usersRouter.route ("/refresh-token").post (userController.refreshAccessToken);
 
 export { usersRouter };

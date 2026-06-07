@@ -3,6 +3,7 @@ import { User } from "../models/user.model.js";
 import { ApiFailure } from "../utils/ApiFailure.js";
 import { ApiSuccess } from "../utils/ApiSuccess.js";
 import { cloudinaryService } from "../services/cloudinary.service.js";
+import jwt from "jsonwebtoken";
 
 
 const registerUser = async_handler (async (request, response) => {
@@ -403,6 +404,59 @@ const getMyProfile = async_handler (async (request, response) => {
 	}
 });
 
+const refreshAccessToken = async_handler (async (request, response) => {
+	const incoming_refresh_token = request.cookies.refreshToken || request.body.refreshToken;
+
+	if (!incoming_refresh_token) {
+		throw new ApiFailure (401, "Unauthorized request! Missing auth token!");
+	}
+
+	try {
+		// automatically throws error
+		const decoded_token_data = jwt.verify (
+			incoming_refresh_token
+			, process.env.JWT_REFRESH_SECRET
+		);
+	
+		const user = await User.findById (decoded_token_data?._id);
+	
+		if (!user) {
+			throw new ApiFailure (404, "User not found!");
+		}
+	
+		if (incoming_refresh_token !== user.refreshToken) {
+			throw new ApiFailure (401, "Invalid/Expired refresh token!");
+		}
+	
+		const { accessToken, refreshToken } = generateAccessAndRefreshTokens (user._id);
+	
+		const cookie_options = {
+			httpOnly: true
+			, secure: true
+		};
+	
+		return response
+			.status (200)
+			.cookie ("accessToken", accessToken, cookie_options)
+			.cookie ("refreshToken", refreshToken, cookie_options)
+			.json (
+				new ApiSuccess (
+					200
+					, "Refreshed access token!"
+					, {
+						accessToken
+						, refreshToken
+					}
+				)
+			);
+	} catch (error) {
+		throw new ApiFailure (
+			501
+			, error?.message || "Failed to refresh access token!"
+		);
+	}
+});
+
 
 export const userController = {
 	registerUser
@@ -413,4 +467,5 @@ export const userController = {
 	, getMyProfile
 	, loginUser
 	, logoutUser
+	, refreshAccessToken
 };
